@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from "react";
 
-// Try both HTTP and HTTPS if needed
+// API URLs - make sure these match your actual EC2 configuration
+// If your EC2 instance is using a different port, update it here
 const API_URL = "http://44.214.91.69:8000";
-const API_URL_HTTPS = "https://44.214.91.69:8000";
+
+// Note: Most EC2 instances don't have HTTPS configured by default
+// Only use HTTPS if you've set up SSL certificates on your EC2 instance
+// const API_URL_HTTPS = "https://44.214.91.69:8000";
+
+// Use only HTTP since HTTPS likely isn't configured
+const API_URL_HTTPS = API_URL; // Fallback to HTTP
 
 export default function Movies() {
   const [movies, setMovies] = useState([]);
@@ -17,25 +24,17 @@ export default function Movies() {
     setLoading(true);
     setError("");
     try {
-      console.log("Trying to fetch movies with HTTP:", `${API_URL}/movies`);
-      let res;
-      let success = false;
+      console.log("Fetching movies from:", `${API_URL}/movies`);
       
-      // Try HTTP first
-      try {
-        res = await fetch(`${API_URL}/movies`);
-        success = true;
-      } catch (httpError) {
-        console.log("HTTP fetch failed, trying HTTPS:", httpError);
-        // If HTTP fails, try HTTPS
-        try {
-          res = await fetch(`${API_URL_HTTPS}/movies`);
-          success = true;
-        } catch (httpsError) {
-          console.error("Both HTTP and HTTPS fetch failed:", httpsError);
-          throw new Error("Failed to connect to server via HTTP or HTTPS");
-        }
-      }
+      // Add a timeout to the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const res = await fetch(`${API_URL}/movies`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId); // Clear the timeout if fetch completes
       
       console.log("Fetch response status:", res.status);
       const data = await res.json();
@@ -43,7 +42,13 @@ export default function Movies() {
       setMovies(data);
     } catch (e) {
       console.error("Fetch error:", e);
-      setError("Failed to fetch movies: " + e.message);
+      if (e.name === 'AbortError') {
+        setError("Request timed out. The server might be unreachable or too slow to respond.");
+      } else if (e.message.includes('NetworkError') || e.message.includes('Failed to fetch')) {
+        setError("Network error: Cannot connect to the server. Please check if the server is running and accessible.");
+      } else {
+        setError("Failed to fetch movies: " + e.message);
+      }
     }
     setLoading(false);
   };
@@ -62,28 +67,16 @@ export default function Movies() {
     setError("");
     setLoading(true);
     try {
-      let res;
-      let success = false;
+      // Add a timeout to the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      // Try HTTP first
-      try {
-        res = await fetch(`${API_URL}/movies/${encodeURIComponent(name)}`, {
-          method: "DELETE",
-        });
-        success = true;
-      } catch (httpError) {
-        console.log("HTTP delete failed, trying HTTPS:", httpError);
-        // If HTTP fails, try HTTPS
-        try {
-          res = await fetch(`${API_URL_HTTPS}/movies/${encodeURIComponent(name)}`, {
-            method: "DELETE",
-          });
-          success = true;
-        } catch (httpsError) {
-          console.error("Both HTTP and HTTPS delete failed:", httpsError);
-          throw new Error("Failed to connect to server via HTTP or HTTPS");
-        }
-      }
+      const res = await fetch(`${API_URL}/movies/${encodeURIComponent(name)}`, {
+        method: "DELETE",
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId); // Clear the timeout if fetch completes
       
       if (!res.ok) {
         const err = await res.json();
@@ -94,7 +87,13 @@ export default function Movies() {
       }
     } catch (e) {
       console.error("Exception in deleteMovie:", e);
-      setError("Delete failed: " + e.message);
+      if (e.name === 'AbortError') {
+        setError("Delete request timed out. The server might be unreachable.");
+      } else if (e.message.includes('NetworkError') || e.message.includes('Failed to fetch')) {
+        setError("Network error: Cannot connect to the server. Please check if the server is running and accessible.");
+      } else {
+        setError("Delete failed: " + e.message);
+      }
     }
     setLoading(false);
   };
@@ -112,36 +111,20 @@ export default function Movies() {
       };
       console.log("Request body:", requestBody);
       
-      let res;
-      let success = false;
+      // Add a timeout to the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      // Try HTTP first
-      try {
-        res = await fetch(`${API_URL}/movies`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        });
-        success = true;
-      } catch (httpError) {
-        console.log("HTTP create failed, trying HTTPS:", httpError);
-        // If HTTP fails, try HTTPS
-        try {
-          res = await fetch(`${API_URL_HTTPS}/movies`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestBody),
-          });
-          success = true;
-        } catch (httpsError) {
-          console.error("Both HTTP and HTTPS create failed:", httpsError);
-          throw new Error("Failed to connect to server via HTTP or HTTPS");
-        }
-      }
+      const res = await fetch(`${API_URL}/movies`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId); // Clear the timeout if fetch completes
       
       console.log("Create response status:", res.status);
       
@@ -158,7 +141,13 @@ export default function Movies() {
       }
     } catch (e) {
       console.error("Exception in createMovie:", e);
-      setError("Failed to create movie: " + e.message);
+      if (e.name === 'AbortError') {
+        setError("Request timed out. The server might be unreachable or too slow to respond.");
+      } else if (e.message.includes('NetworkError') || e.message.includes('Failed to fetch')) {
+        setError("Network error: Cannot connect to the server. Please check if the server is running and accessible.");
+      } else {
+        setError("Failed to create movie: " + e.message);
+      }
     }
     setLoading(false);
   };
