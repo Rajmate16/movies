@@ -10,7 +10,7 @@ app = FastAPI(title="Movies API", description="A REST API for managing movies", 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React app URL
+    allow_origins=["*"],  # Allow all origins including Amplify domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
