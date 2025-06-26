@@ -4,12 +4,11 @@ import React, { useEffect, useState } from "react";
 // If your EC2 instance is using a different port, update it here
 const API_URL = "http://44.214.91.69:8000";
 
-// Note: Most EC2 instances don't have HTTPS configured by default
-// Only use HTTPS if you've set up SSL certificates on your EC2 instance
-// const API_URL_HTTPS = "https://44.214.91.69:8000";
+// If you're testing locally, uncomment this line
+// const API_URL = "http://localhost:8000";
 
-// Use only HTTP since HTTPS likely isn't configured
-const API_URL_HTTPS = API_URL; // Fallback to HTTP
+// If your EC2 IP has changed, update it here
+// You can find your EC2 public IP in the AWS console
 
 export default function Movies() {
   const [movies, setMovies] = useState([]);
@@ -18,6 +17,7 @@ export default function Movies() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [newMovie, setNewMovie] = useState({ name: "", collection: "" });
+  const [serverStatus, setServerStatus] = useState("unknown"); // unknown, online, offline
 
   // Fetch all movies
   const fetchMovies = async () => {
@@ -53,8 +53,49 @@ export default function Movies() {
     setLoading(false);
   };
 
+  // Test server connection
+  const testServerConnection = async () => {
+    try {
+      console.log("Testing connection to server:", API_URL);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const res = await fetch(`${API_URL}/`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (res.ok) {
+        console.log("Server is online!");
+        setServerStatus("online");
+        return true;
+      } else {
+        console.error("Server returned error:", res.status);
+        setServerStatus("offline");
+        return false;
+      }
+    } catch (e) {
+      console.error("Server connection test failed:", e);
+      setServerStatus("offline");
+      return false;
+    }
+  };
+  
   useEffect(() => {
-    fetchMovies();
+    // First test the connection, then fetch movies if server is online
+    testServerConnection().then(isOnline => {
+      if (isOnline) {
+        fetchMovies();
+      }
+    });
+    
+    // Set up an interval to periodically check server connection
+    const intervalId = setInterval(() => {
+      testServerConnection();
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(intervalId); // Clean up on unmount
   }, []);
 
   // Select a movie
@@ -152,9 +193,52 @@ export default function Movies() {
     setLoading(false);
   };
 
+  // Manual retry function
+  const handleRetry = () => {
+    setError("");
+    testServerConnection().then(isOnline => {
+      if (isOnline) {
+        fetchMovies();
+      }
+    });
+  };
+
   return (
     <div style={{ maxWidth: 800, margin: "40px auto", fontFamily: "sans-serif" }}>
       <h2>Movies List</h2>
+      
+      {/* Server Status Indicator */}
+      <div style={{ marginBottom: 15 }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div 
+            style={{ 
+              width: 12, 
+              height: 12, 
+              borderRadius: "50%", 
+              backgroundColor: serverStatus === "online" ? "#28a745" : serverStatus === "offline" ? "#dc3545" : "#ffc107",
+              marginRight: 8
+            }} 
+          />
+          <span>Server Status: {serverStatus === "online" ? "Connected" : serverStatus === "offline" ? "Disconnected" : "Checking..."}</span>
+          
+          {serverStatus === "offline" && (
+            <button 
+              onClick={handleRetry}
+              style={{ 
+                marginLeft: 10,
+                padding: "5px 10px", 
+                backgroundColor: "#007bff", 
+                color: "white", 
+                border: "none", 
+                borderRadius: 3,
+                cursor: "pointer"
+              }}
+            >
+              Retry Connection
+            </button>
+          )}
+        </div>
+      </div>
       
       {/* Add Movie Button */}
       <button 
