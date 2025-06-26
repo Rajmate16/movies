@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 
+// Try both HTTP and HTTPS if needed
 const API_URL = "http://44.214.91.69:8000";
+const API_URL_HTTPS = "https://44.214.91.69:8000";
 
 export default function Movies() {
   const [movies, setMovies] = useState([]);
@@ -15,11 +17,33 @@ export default function Movies() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/movies`);
+      console.log("Trying to fetch movies with HTTP:", `${API_URL}/movies`);
+      let res;
+      let success = false;
+      
+      // Try HTTP first
+      try {
+        res = await fetch(`${API_URL}/movies`);
+        success = true;
+      } catch (httpError) {
+        console.log("HTTP fetch failed, trying HTTPS:", httpError);
+        // If HTTP fails, try HTTPS
+        try {
+          res = await fetch(`${API_URL_HTTPS}/movies`);
+          success = true;
+        } catch (httpsError) {
+          console.error("Both HTTP and HTTPS fetch failed:", httpsError);
+          throw new Error("Failed to connect to server via HTTP or HTTPS");
+        }
+      }
+      
+      console.log("Fetch response status:", res.status);
       const data = await res.json();
+      console.log("Fetch response data:", data);
       setMovies(data);
     } catch (e) {
-      setError("Failed to fetch movies");
+      console.error("Fetch error:", e);
+      setError("Failed to fetch movies: " + e.message);
     }
     setLoading(false);
   };
@@ -38,9 +62,29 @@ export default function Movies() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/movies/${encodeURIComponent(name)}`, {
-        method: "DELETE",
-      });
+      let res;
+      let success = false;
+      
+      // Try HTTP first
+      try {
+        res = await fetch(`${API_URL}/movies/${encodeURIComponent(name)}`, {
+          method: "DELETE",
+        });
+        success = true;
+      } catch (httpError) {
+        console.log("HTTP delete failed, trying HTTPS:", httpError);
+        // If HTTP fails, try HTTPS
+        try {
+          res = await fetch(`${API_URL_HTTPS}/movies/${encodeURIComponent(name)}`, {
+            method: "DELETE",
+          });
+          success = true;
+        } catch (httpsError) {
+          console.error("Both HTTP and HTTPS delete failed:", httpsError);
+          throw new Error("Failed to connect to server via HTTP or HTTPS");
+        }
+      }
+      
       if (!res.ok) {
         const err = await res.json();
         setError(err.detail || "Delete failed");
@@ -49,7 +93,8 @@ export default function Movies() {
         fetchMovies();
       }
     } catch (e) {
-      setError("Delete failed");
+      console.error("Exception in deleteMovie:", e);
+      setError("Delete failed: " + e.message);
     }
     setLoading(false);
   };
@@ -60,26 +105,60 @@ export default function Movies() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/movies`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: newMovie.name,
-          collection: parseInt(newMovie.collection),
-        }),
-      });
+      console.log("Creating movie with data:", newMovie);
+      const requestBody = {
+        name: newMovie.name,
+        collection: parseInt(newMovie.collection),
+      };
+      console.log("Request body:", requestBody);
+      
+      let res;
+      let success = false;
+      
+      // Try HTTP first
+      try {
+        res = await fetch(`${API_URL}/movies`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+        success = true;
+      } catch (httpError) {
+        console.log("HTTP create failed, trying HTTPS:", httpError);
+        // If HTTP fails, try HTTPS
+        try {
+          res = await fetch(`${API_URL_HTTPS}/movies`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+          });
+          success = true;
+        } catch (httpsError) {
+          console.error("Both HTTP and HTTPS create failed:", httpsError);
+          throw new Error("Failed to connect to server via HTTP or HTTPS");
+        }
+      }
+      
+      console.log("Create response status:", res.status);
+      
       if (!res.ok) {
         const err = await res.json();
+        console.error("Error creating movie:", err);
         setError(err.detail || "Failed to create movie");
       } else {
+        const data = await res.json();
+        console.log("Movie created successfully:", data);
         setNewMovie({ name: "", collection: "" });
         setShowForm(false);
         fetchMovies();
       }
     } catch (e) {
-      setError("Failed to create movie");
+      console.error("Exception in createMovie:", e);
+      setError("Failed to create movie: " + e.message);
     }
     setLoading(false);
   };

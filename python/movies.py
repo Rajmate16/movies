@@ -10,7 +10,17 @@ app = FastAPI(title="Movies API", description="A REST API for managing movies", 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins including Amplify domain
+    # Allow specific origins including localhost and common Amplify domains
+    # Using ["*"] would be simpler but may cause issues with credentials
+    allow_origins=[
+        "http://localhost:3000",
+        "https://localhost:3000",
+        "http://44.214.91.69:8000",
+        "https://44.214.91.69:8000",
+        "https://main.d1234abcdef.amplifyapp.com",  # Replace with your actual Amplify domain if known
+        "http://main.d1234abcdef.amplifyapp.com",   # Replace with your actual Amplify domain if known
+        "*"  # As a fallback, allow all origins
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
