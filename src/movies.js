@@ -2,16 +2,16 @@ import React, { useEffect, useState } from "react";
 
 // API URLs - make sure these match your actual EC2 configuration
 // If your EC2 instance is using a different port, update it here
-const API_URL = "http://44.220.88.149:8000";
+const EC2_URL = "http://44.220.88.149:8000";
 
-// Create a proxy URL for production use with Amplify (HTTPS)
-// This helps avoid mixed content issues when frontend is HTTPS and backend is HTTP
-const isProduction = window.location.protocol === 'https:';
-// If in production (Amplify), use a CORS proxy or relative URL if possible
-// For now, we'll still try the direct URL, but this may be blocked by browsers
+// API URL - use environment variable from Amplify (API Gateway URL) or fallback to hardcoded value
+// The API Gateway URL is HTTPS so we don't need a CORS proxy anymore
+const API_URL = process.env.REACT_APP_API_URL || "http://44.220.88.149:8000";
 
-// If you're testing locally, uncomment this line
-// const API_URL = "http://localhost:8000";
+// Log the API URL for debugging
+console.log("Using API URL:", API_URL);
+console.log("Environment:", process.env.NODE_ENV);
+console.log("Protocol:", window.location.protocol);
 
 export default function Movies() {
   const [movies, setMovies] = useState([]);
