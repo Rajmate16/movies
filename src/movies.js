@@ -4,11 +4,14 @@ import React, { useEffect, useState } from "react";
 // If your EC2 instance is using a different port, update it here
 const API_URL = "http://44.220.88.149:8000";
 
+// Create a proxy URL for production use with Amplify (HTTPS)
+// This helps avoid mixed content issues when frontend is HTTPS and backend is HTTP
+const isProduction = window.location.protocol === 'https:';
+// If in production (Amplify), use a CORS proxy or relative URL if possible
+// For now, we'll still try the direct URL, but this may be blocked by browsers
+
 // If you're testing locally, uncomment this line
 // const API_URL = "http://localhost:8000";
-
-// For debugging, try both HTTP and HTTPS if one doesn't work
-// const API_URL_HTTPS = "https://44.220.88.149:8000";
 
 export default function Movies() {
   const [movies, setMovies] = useState([]);
@@ -25,29 +28,34 @@ export default function Movies() {
     setError("");
     try {
       console.log("Fetching movies from:", `${API_URL}/movies`);
+      console.log("Current protocol:", window.location.protocol);
       
-      // Add a timeout to the fetch request
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const res = await fetch(`${API_URL}/movies`, {
-        signal: controller.signal
+      // Add mode: 'cors' explicitly to help with CORS issues
+      const res = await fetch(`${API_URL}/movies`, { 
+        signal: controller.signal,
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
       
-      clearTimeout(timeoutId); // Clear the timeout if fetch completes
-      
+      clearTimeout(timeoutId);
       console.log("Fetch response status:", res.status);
       const data = await res.json();
-      console.log("Fetch response data:", data);
       setMovies(data);
+      console.log("Successfully fetched movies:", data);
     } catch (e) {
-      console.error("Fetch error:", e);
+      console.error("Error fetching movies:", e);
       if (e.name === 'AbortError') {
-        setError("Request timed out. The server might be unreachable or too slow to respond.");
-      } else if (e.message.includes('NetworkError') || e.message.includes('Failed to fetch')) {
+        setError("Request timed out. The server might be down or unreachable.");
+      } else if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
         setError("Network error: Cannot connect to the server. Please check if the server is running and accessible.");
+        console.log("This may be due to mixed content blocking. Your frontend is HTTPS but trying to access an HTTP API.");
       } else {
-        setError("Failed to fetch movies: " + e.message);
+        setError(`Error: ${e.message}`);
       }
     }
     setLoading(false);
@@ -56,27 +64,35 @@ export default function Movies() {
   // Test server connection
   const testServerConnection = async () => {
     try {
-      console.log("Testing connection to server:", API_URL);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      console.log("Testing server connection to:", `${API_URL}/`);
+      console.log("Current protocol:", window.location.protocol);
+      console.log("Current origin:", window.location.origin);
       
-      const res = await fetch(`${API_URL}/`, {
-        signal: controller.signal
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      // Add explicit CORS mode and headers
+      const res = await fetch(`${API_URL}/`, { 
+        signal: controller.signal,
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
       
       clearTimeout(timeoutId);
+      console.log("Server test response status:", res.status);
       
       if (res.ok) {
-        console.log("Server is online!");
         setServerStatus("online");
         return true;
       } else {
-        console.error("Server returned error:", res.status);
         setServerStatus("offline");
         return false;
       }
     } catch (e) {
-      console.error("Server connection test failed:", e);
+      console.error("Server test error:", e);
+      console.log("This may be due to mixed content blocking if your frontend is HTTPS but backend is HTTP");
       setServerStatus("offline");
       return false;
     }

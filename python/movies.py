@@ -14,10 +14,12 @@ app.add_middleware(
     # Using ["*"] would be simpler but may cause issues with credentials
     allow_origins=[
         "http://localhost:3000",
-        "http://44.220.88.149:8000",
-        "https://main.d17k2qkm6w4iny.amplifyapp.com",
-        "https://*.amplifyapp.com",
-        "*"
+        "https://localhost:3000",
+        "http://44.214.91.69:8000",
+        "https://44.214.91.69:8000",
+        "https://main.d1234abcdef.amplifyapp.com",  # Replace with your actual Amplify domain if known
+        "http://main.d1234abcdef.amplifyapp.com",   # Replace with your actual Amplify domain if known
+        "*"  # As a fallback, allow all origins
     ],
     allow_credentials=True,
     allow_methods=["*"],
