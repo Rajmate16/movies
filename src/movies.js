@@ -2,13 +2,13 @@ import React, { useEffect, useState } from "react";
 
 // API URLs - make sure these match your actual EC2 configuration
 // If your EC2 instance is using a different port, update it here
-const API_URL = "http://44.214.91.69:8000";
+const API_URL = "http://44.220.88.149:8000";
 
 // If you're testing locally, uncomment this line
 // const API_URL = "http://localhost:8000";
 
-// If your EC2 IP has changed, update it here
-// You can find your EC2 public IP in the AWS console
+// For debugging, try both HTTP and HTTPS if one doesn't work
+// const API_URL_HTTPS = "https://44.220.88.149:8000";
 
 export default function Movies() {
   const [movies, setMovies] = useState([]);
